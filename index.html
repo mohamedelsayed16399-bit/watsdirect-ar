@@ -31,6 +31,7 @@ button.g{background:#dcfce7;color:var(--ink);font-size:15px;font-weight:700}
 <main>
 <div class="card"><h2>١) الرقم</h2>
 <div class="row"><select id="cc" class="cc"></select><input id="num" type="tel" inputmode="tel" placeholder="1012345678 أو 01012345678" oninput="upd()"></div>
+<input id="nick" placeholder="اسم الشخص (اختياري، بيتحفظ مع الرقم)" style="margin-top:8px">
 <div class="prev" id="pv">—</div><div class="err" id="er"></div>
 <label>رسالة (اختياري)</label><textarea id="msg" placeholder="اكتب رسالتك هنا" oninput="upd()"></textarea>
 <div class="tp" id="tp"></div>
@@ -114,10 +115,11 @@ function upd(){const f=full();$('pv').textContent=f?link():'—';$('er').textCon
 function go(){const f=full();if(!valid(f)){$('er').textContent='اكتب رقم صحيح الأول';return}save(f);window.open(link(),'_blank')}
 async function copyL(){const f=full();if(!valid(f)){$('er').textContent='اكتب رقم صحيح الأول';return}save(f);try{await navigator.clipboard.writeText(link());alert('اتنسخ اللينك ✅')}catch(e){prompt('انسخ اللينك:',link())}}
 async function shareL(){const f=full();if(!valid(f)){$('er').textContent='اكتب رقم صحيح الأول';return}const u=link();if(navigator.share){try{await navigator.share({title:'كلمني على واتساب',text:'كلمني على واتساب',url:u});return}catch(e){}}copyL()}
-let H=[];try{H=JSON.parse(localStorage.getItem('wd')||'[]')}catch(e){}
-function save(f){H=[f].concat(H.filter(x=>x!==f)).slice(0,8);try{localStorage.setItem('wd',JSON.stringify(H))}catch(e){}rh()}
-function rh(){if(!H.length)return;$('hl').innerHTML=H.map((f,i)=>`<div class="h"><span dir="ltr">+${f}</span><span><button onclick="useH(${i})">استخدم</button> <button onclick="delH(${i})">✕</button></span></div>`).join('')}
-function useH(i){$('cc').value='0';$('num').value=H[i];upd()}
+let H=[];try{H=JSON.parse(localStorage.getItem('wd')||'[]').map(x=>typeof x=='string'?{f:x,nm:''}:x)}catch(e){}
+function esc(t){return String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';')}
+function save(f){const old=H.find(x=>x.f===f),nm=($('nick').value.trim()||(old&&old.nm)||'').slice(0,40);H=[{f:f,nm:nm}].concat(H.filter(x=>x.f!==f)).slice(0,15);try{localStorage.setItem('wd',JSON.stringify(H))}catch(e){}rh()}
+function rh(){if(!H.length)return;$('hl').innerHTML=H.map((f,i)=>`<div class="h"><span>${f.nm?'<b>'+esc(f.nm)+'</b> ':''}<span dir="ltr">+${f.f}</span></span><span><button onclick="useH(${i})">استخدم</button> <button onclick="delH(${i})">✕</button></span></div>`).join('')}
+function useH(i){$('cc').value='0';$('num').value=H[i].f;$('nick').value=H[i].nm;upd()}
 function delH(i){H.splice(i,1);try{localStorage.setItem('wd',JSON.stringify(H))}catch(e){}if(!H.length)$('hl').innerHTML='<span class="mut">لسه مفيش</span>';else rh()}
 const q=new URLSearchParams(location.search);if(q.get('n')){$('num').value=q.get('n');if(q.get('c'))$('cc').value=q.get('c')}
 rh();upd();
