@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>واتس مباشر - ابعت واتساب لأي رقم من غير ما تحفظه</title>
+<meta name="description" content="اكتب أي رقم (مصري أو دولي) وابعت له رسالة واتساب فوراً من غير ما تحفظ الرقم. وكمان اعمل لينك واتساب جاهز برسالتك تحطه في البايو أو تبعته لعملائك.">
+<meta property="og:title" content="واتس مباشر - واتساب لأي رقم من غير حفظ"><meta property="og:description" content="ابعت لأي رقم من غير ما تحفظه، واعمل لينك واتساب برسالة جاهزة."><meta property="og:type" content="website">
+<meta name="theme-color" content="#16a34a">
+<style>
+:root{--pri:#16a34a;--ink:#14231a;--bg:#f0fdf4;--mut:#64748b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,"Segoe UI",Tahoma,Arial,sans-serif;padding-bottom:30px}
+header{background:linear-gradient(135deg,#16a34a,#0f766e);color:#fff;text-align:center;padding:16px 12px 38px}
+header h1{margin:0;font-size:28px}header p{margin:4px 0 0;font-size:14px;opacity:.92}
+main{max-width:560px;margin:-26px auto 0;padding:0 12px}
+.card{background:#fff;border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 10px #0001}
+h2{margin:0 0 10px;font-size:16px}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+input,textarea,select{width:100%;font:inherit;padding:11px;border:1.5px solid #bbf7d0;border-radius:10px;background:#fff;color:var(--ink)}
+input:focus,textarea:focus{outline:2px solid var(--pri)}
+textarea{min-height:80px;resize:vertical}
+.row{display:flex;gap:8px}.row>*{flex:1}.row .cc{flex:0 0 130px}
+button.b{width:100%;border:0;border-radius:12px;padding:13px;font:inherit;font-weight:800;font-size:17px;color:#fff;background:var(--pri);cursor:pointer;margin-top:12px}
+button.g{background:#dcfce7;color:var(--ink);font-size:15px;font-weight:700}
+.tp{display:flex;gap:6px;overflow-x:auto;margin-top:8px}.tp button{flex:0 0 auto;border:0;background:#dcfce7;border-radius:99px;padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
+.prev{background:#f0fdf4;border-radius:10px;padding:8px 10px;font-size:13px;color:var(--mut);margin-top:8px;direction:ltr;text-align:left;word-break:break-all}
+.hist .h{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed #d1fae5}
+.hist button{border:0;background:#dcfce7;border-radius:8px;padding:6px 10px;font:inherit;cursor:pointer}
+.mut{color:var(--mut);font-size:13px}.err{color:#dc2626;font-size:13px;margin-top:6px}
+</style></head><body>
+<header><h1>💬 واتس مباشر</h1><p>ابعت لأي رقم من غير ما تحفظه في الموبايل</p></header>
+<main>
+<div class="card"><h2>١) الرقم</h2>
+<div class="row"><select id="cc" class="cc"></select><input id="num" type="tel" inputmode="tel" placeholder="1012345678 أو 01012345678" oninput="upd()"></div>
+<div class="prev" id="pv">—</div><div class="err" id="er"></div>
+<label>رسالة (اختياري)</label><textarea id="msg" placeholder="اكتب رسالتك هنا" oninput="upd()"></textarea>
+<div class="tp" id="tp"></div>
+<button class="b" onclick="go()">افتح واتساب 💬</button>
+<button class="b g" onclick="copyL()">نسخ اللينك 🔗</button></div>
+<div class="card"><h2>٢) لينك واتساب للشغل (للبايو والعملاء)</h2><div class="mut">نفس اللينك فوق بيشتغل كبايو أو زرار: اللي يدوس عليه يفتح معاك شات برسالة جاهزة. دوس "شارك اللينك" وابعته أو حطه في إنستجرام وفيسبوك.</div>
+<button class="b g" onclick="shareL()">شارك اللينك 📤</button></div>
+<div class="card hist"><h2>آخر الأرقام</h2><div id="hl"><span class="mut">لسه مفيش</span></div></div>
+<div class="card mut">الرقم والرسالة بيتحولوا لرابط واتساب رسمي (wa.me) على جهازك بس، ومفيش حاجة بتتبعت لأي سيرفر. آخر الأرقام محفوظة على جهازك فقط.</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const CC=[['20','🇪🇬 مصر +20'],['966','🇸🇦 السعودية +966'],['971','🇦🇪 الإمارات +971'],['965','🇰🇼 الكويت +965'],['974','🇶🇦 قطر +974'],['973','🇧🇭 البحرين +973'],['968','🇴🇲 عُمان +968'],['962','🇯🇴 الأردن +962'],['961','🇱🇧 لبنان +961'],['964','🇮🇶 العراق +964'],['218','🇱🇾 ليبيا +218'],['212','🇲🇦 المغرب +212'],['213','🇩🇿 الجزائر +213'],['216','🇹🇳 تونس +216'],['249','🇸🇩 السودان +249'],['90','🇹🇷 تركيا +90'],['44','🇬🇧 بريطانيا +44'],['1','🇺🇸 أمريكا +1'],['49','🇩🇪 ألمانيا +49'],['33','🇫🇷 فرنسا +33'],['39','🇮🇹 إيطاليا +39'],['0','🌍 رقم دولي كامل']];
+$('cc').innerHTML=CC.map(([c,n])=>`<option value="${c}">${n}</option>`).join('');
+const TP=['السلام عليكم، حابب أستفسر عن الخدمة','مرحباً، شفت إعلانك وعايز التفاصيل','شكراً على وقتك','هل الطلب لسه متاح؟','ممكن نتكلم دلوقتي؟'];
+$('tp').innerHTML=TP.map((t,i)=>`<button onclick="$('msg').value=TP[${i}];upd()">${t}</button>`).join('');
+const AR='٠١٢٣٤٥٦٧٨٩',FA='۰۱۲۳۴۵۶۷۸۹';
+function clean(s){return s.replace(/[٠-٩]/g,d=>AR.indexOf(d)).replace(/[۰-۹]/g,d=>FA.indexOf(d)).replace(/[^\d+]/g,'')}
+function full(){let n=clean($('num').value),cc=$('cc').value;if(!n)return '';
+ if(n.startsWith('+'))return n.slice(1);if(n.startsWith('00'))return n.slice(2);
+ if(cc==='0')return n;
+ if(n.startsWith(cc)&&n.length>cc.length+6)return n;
+ if(n.startsWith('0'))n=n.slice(1);return cc+n}
+function valid(f){if(!f)return false;if(f.length<8||f.length>15)return false;if(f.startsWith('20')&&!/^20(10|11|12|15)\d{8}$/.test(f)&&!/^20(1\d{9}|[2-9]\d{7,9})$/.test(f))return false;return true}
+function link(){const f=full(),m=$('msg').value.trim();return 'https://wa.me/'+f+(m?'?text='+encodeURIComponent(m):'')}
+function upd(){const f=full();$('pv').textContent=f?link():'—';$('er').textContent=f&&!valid(f)?'الرقم شكله ناقص أو زيادة، راجعه':''}
+function go(){const f=full();if(!valid(f)){$('er').textContent='اكتب رقم صحيح الأول';return}save(f);window.open(link(),'_blank')}
+async function copyL(){const f=full();if(!valid(f)){$('er').textContent='اكتب رقم صحيح الأول';return}save(f);try{await navigator.clipboard.writeText(link());alert('اتنسخ اللينك ✅')}catch(e){prompt('انسخ اللينك:',link())}}
+async function shareL(){const f=full();if(!valid(f)){$('er').textContent='اكتب رقم صحيح الأول';return}const u=link();if(navigator.share){try{await navigator.share({title:'كلمني على واتساب',text:'كلمني على واتساب',url:u});return}catch(e){}}copyL()}
+let H=[];try{H=JSON.parse(localStorage.getItem('wd')||'[]')}catch(e){}
+function save(f){H=[f].concat(H.filter(x=>x!==f)).slice(0,8);try{localStorage.setItem('wd',JSON.stringify(H))}catch(e){}rh()}
+function rh(){if(!H.length)return;$('hl').innerHTML=H.map((f,i)=>`<div class="h"><span dir="ltr">+${f}</span><span><button onclick="useH(${i})">استخدم</button> <button onclick="delH(${i})">✕</button></span></div>`).join('')}
+function useH(i){$('cc').value='0';$('num').value=H[i];upd()}
+function delH(i){H.splice(i,1);try{localStorage.setItem('wd',JSON.stringify(H))}catch(e){}if(!H.length)$('hl').innerHTML='<span class="mut">لسه مفيش</span>';else rh()}
+const q=new URLSearchParams(location.search);if(q.get('n')){$('num').value=q.get('n');if(q.get('c'))$('cc').value=q.get('c')}
+rh();upd();
+</script></body></html>
