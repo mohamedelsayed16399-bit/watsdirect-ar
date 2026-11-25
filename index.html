@@ -37,11 +37,63 @@ button.g{background:#dcfce7;color:var(--ink);font-size:15px;font-weight:700}
 <button class="b" onclick="go()">افتح واتساب 💬</button>
 <button class="b g" onclick="copyL()">نسخ اللينك 🔗</button></div>
 <div class="card"><h2>٢) لينك واتساب للشغل (للبايو والعملاء)</h2><div class="mut">نفس اللينك فوق بيشتغل كبايو أو زرار: اللي يدوس عليه يفتح معاك شات برسالة جاهزة. دوس "شارك اللينك" وابعته أو حطه في إنستجرام وفيسبوك.</div>
-<button class="b g" onclick="shareL()">شارك اللينك 📤</button></div>
+<div style="text-align:center;margin-top:12px"><canvas id="qr" style="width:240px;height:240px;border-radius:12px;border:1px solid #d1fae5;display:none"></canvas><div class="mut" id="qrh">اكتب رقم صحيح وهيظهر الـQR هنا</div></div>
+<button class="b g" onclick="shareL()">شارك اللينك 📤</button><button class="b g" onclick="dlQR()">نزّل صورة QR 🖼️</button></div>
 <div class="card hist"><h2>آخر الأرقام</h2><div id="hl"><span class="mut">لسه مفيش</span></div></div>
 <div class="card mut">الرقم والرسالة بيتحولوا لرابط واتساب رسمي (wa.me) على جهازك بس، ومفيش حاجة بتتبعت لأي سيرفر. آخر الأرقام محفوظة على جهازك فقط.</div>
 </main>
 <script>
+const QR=(function(){
+const EXP=new Array(512),LOG=new Array(256);{let x=1;for(let i=0;i<255;i++){EXP[i]=x;LOG[x]=i;x<<=1;if(x&256)x^=0x11d}for(let i=255;i<512;i++)EXP[i]=EXP[i-255]}
+const mul=(a,b)=>a&&b?EXP[LOG[a]+LOG[b]]:0;
+function gen(n){let g=[1];for(let i=0;i<n;i++){const ng=new Array(g.length+1).fill(0);for(let j=0;j<g.length;j++){ng[j]^=g[j];ng[j+1]^=mul(g[j],EXP[i])}g=ng}return g}
+function rs(d,n){const g=gen(n),r=new Array(n).fill(0);for(const b of d){const f=b^r.shift();r.push(0);if(f)for(let i=0;i<n;i++)r[i]^=mul(g[i+1],f)}return r}
+// ECC level M, versions 1..10: [ec per block, [[count,dataPerBlock],...]]
+const T=[null,[10,[[1,16]]],[16,[[1,28]]],[26,[[1,44]]],[18,[[2,32]]],[24,[[2,43]]],[16,[[4,27]]],[18,[[4,31]]],[22,[[2,38],[2,39]]],[22,[[3,36],[2,37]]],[26,[[4,43],[1,44]]]];
+const AL=[null,[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50]];
+function dataCw(v){return T[v][1].reduce((a,[c,d])=>a+c*d,0)}
+function make(text){
+ const bytes=[...new TextEncoder().encode(text)];let v=0;
+ for(let i=1;i<=10;i++){const cb=i<10?8:16;if(4+cb+8*bytes.length<=8*dataCw(i)){v=i;break}}
+ if(!v)return null;
+ const bits=[];const push=(val,n)=>{for(let i=n-1;i>=0;i--)bits.push((val>>>i)&1)};
+ push(4,4);push(bytes.length,v<10?8:16);bytes.forEach(b=>push(b,8));
+ const cap=8*dataCw(v);for(let i=0;i<4&&bits.length<cap;i++)bits.push(0);while(bits.length%8)bits.push(0);
+ const cw=[];for(let i=0;i<bits.length;i+=8){let x=0;for(let j=0;j<8;j++)x=x<<1|bits[i+j];cw.push(x)}
+ for(let p=0xEC;cw.length<dataCw(v);p^=0xEC^0x11)cw.push(p);
+ const ec=T[v][0],blocks=[];let pos=0;
+ for(const [c,d] of T[v][1])for(let i=0;i<c;i++){const dd=cw.slice(pos,pos+d);pos+=d;blocks.push({d:dd,e:rs(dd,ec)})}
+ const out=[];const maxd=Math.max(...blocks.map(b=>b.d.length));
+ for(let i=0;i<maxd;i++)blocks.forEach(b=>{if(i<b.d.length)out.push(b.d[i])});
+ for(let i=0;i<ec;i++)blocks.forEach(b=>out.push(b.e[i]));
+ const size=17+4*v;
+ const M=Array.from({length:size},()=>new Array(size).fill(false)),F=Array.from({length:size},()=>new Array(size).fill(false));
+ const set=(x,y,val)=>{if(x>=0&&y>=0&&x<size&&y<size){M[y][x]=val;F[y][x]=true}};
+ for(let i=0;i<size;i++){set(6,i,i%2===0);set(i,6,i%2===0)}
+ const finder=(cx,cy)=>{for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){const d=Math.max(Math.abs(dx),Math.abs(dy));set(cx+dx,cy+dy,d!==2&&d!==4)}};
+ finder(3,3);finder(size-4,3);finder(3,size-4);
+ const ap=AL[v];for(let i=0;i<ap.length;i++)for(let j=0;j<ap.length;j++){if((i===0&&j===0)||(i===0&&j===ap.length-1)||(i===ap.length-1&&j===0))continue;
+  for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)set(ap[i]+dx,ap[j]+dy,Math.max(Math.abs(dx),Math.abs(dy))!==1)}
+ const fmt=(mask)=>{let data=(0<<3)|mask,rem=data;for(let i=0;i<10;i++)rem=(rem<<1)^((rem>>>9)*0x537);const b=((data<<10)|rem)^0x5412;const g=i=>((b>>>i)&1)===1;
+  for(let i=0;i<=5;i++)set(8,i,g(i));set(8,7,g(6));set(8,8,g(7));set(7,8,g(8));for(let i=9;i<15;i++)set(14-i,8,g(i));
+  for(let i=0;i<8;i++)set(size-1-i,8,g(i));for(let i=8;i<15;i++)set(8,size-15+i,g(i));set(8,size-8,true)};
+ fmt(0);
+ if(v>=7){let rem=v;for(let i=0;i<12;i++)rem=(rem<<1)^((rem>>>11)*0x1F25);const b=(v<<12)|rem;for(let i=0;i<18;i++){const c=((b>>>i)&1)===1,a=size-11+i%3,bb=Math.floor(i/3);set(a,bb,c);set(bb,a,c)}}
+ let i=0;const total=out.length*8;
+ for(let right=size-1;right>=1;right-=2){if(right===6)right=5;for(let vert=0;vert<size;vert++)for(let j=0;j<2;j++){const x=right-j,up=((right+1)&2)===0,y=up?size-1-vert:vert;if(!F[y][x]&&i<total){M[y][x]=((out[i>>>3]>>>(7-(i&7)))&1)===1;i++}}}
+ const mk=[(x,y)=>(x+y)%2===0,(x,y)=>y%2===0,(x,y)=>x%3===0,(x,y)=>(x+y)%3===0,(x,y)=>(Math.floor(x/3)+Math.floor(y/2))%2===0,(x,y)=>x*y%2+x*y%3===0,(x,y)=>(x*y%2+x*y%3)%2===0,(x,y)=>((x+y)%2+x*y%3)%2===0];
+ const apply=m=>{for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(!F[y][x]&&mk[m](x,y))M[y][x]=!M[y][x]};
+ const pen=()=>{let s=0;for(let pass=0;pass<2;pass++){for(let a=0;a<size;a++){let run=1;for(let b=1;b<size;b++){const cur=pass?M[b][a]:M[a][b],prev=pass?M[b-1][a]:M[a][b-1];if(cur===prev){run++;if(run===5)s+=3;else if(run>5)s++}else run=1}}}
+  for(let y=0;y<size-1;y++)for(let x=0;x<size-1;x++){const c=M[y][x];if(c===M[y][x+1]&&c===M[y+1][x]&&c===M[y+1][x+1])s+=3}
+  const pat=[true,false,true,true,true,false,true,false,false,false,false],pr=pat.slice().reverse();
+  for(let pass=0;pass<2;pass++)for(let a=0;a<size;a++)for(let b=0;b<=size-11;b++){let m1=true,m2=true;for(let k=0;k<11;k++){const cur=pass?M[b+k][a]:M[a][b+k];if(cur!==pat[k])m1=false;if(cur!==pr[k])m2=false}if(m1||m2)s+=40}
+  let dark=0;for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(M[y][x])dark++;s+=Math.floor(Math.abs(dark*20-size*size*10)/(size*size))*10;return s};
+ let best=0,bp=1e9;for(let m=0;m<8;m++){apply(m);fmt(m);const p=pen();if(p<bp){bp=p;best=m}apply(m)}
+ apply(best);fmt(best);
+ return M}
+function draw(canvas,text,px,dark,light){const M=make(text);if(!M)return false;const n=M.length,q=4,s=Math.floor(px/(n+2*q));canvas.width=canvas.height=s*(n+2*q);const g=canvas.getContext('2d');g.fillStyle=light||'#fff';g.fillRect(0,0,canvas.width,canvas.height);g.fillStyle=dark||'#000';for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(M[y][x])g.fillRect((x+q)*s,(y+q)*s,s,s);return true}
+return{make,draw}})();
+
 const $=id=>document.getElementById(id);
 const CC=[['20','🇪🇬 مصر +20'],['966','🇸🇦 السعودية +966'],['971','🇦🇪 الإمارات +971'],['965','🇰🇼 الكويت +965'],['974','🇶🇦 قطر +974'],['973','🇧🇭 البحرين +973'],['968','🇴🇲 عُمان +968'],['962','🇯🇴 الأردن +962'],['961','🇱🇧 لبنان +961'],['964','🇮🇶 العراق +964'],['218','🇱🇾 ليبيا +218'],['212','🇲🇦 المغرب +212'],['213','🇩🇿 الجزائر +213'],['216','🇹🇳 تونس +216'],['249','🇸🇩 السودان +249'],['90','🇹🇷 تركيا +90'],['44','🇬🇧 بريطانيا +44'],['1','🇺🇸 أمريكا +1'],['49','🇩🇪 ألمانيا +49'],['33','🇫🇷 فرنسا +33'],['39','🇮🇹 إيطاليا +39'],['0','🌍 رقم دولي كامل']];
 $('cc').innerHTML=CC.map(([c,n])=>`<option value="${c}">${n}</option>`).join('');
@@ -56,7 +108,9 @@ function full(){let n=clean($('num').value),cc=$('cc').value;if(!n)return '';
  if(n.startsWith('0'))n=n.slice(1);return cc+n}
 function valid(f){if(!f)return false;if(f.length<8||f.length>15)return false;if(f.startsWith('20')&&!/^20(10|11|12|15)\d{8}$/.test(f)&&!/^20(1\d{9}|[2-9]\d{7,9})$/.test(f))return false;return true}
 function link(){const f=full(),m=$('msg').value.trim();return 'https://wa.me/'+f+(m?'?text='+encodeURIComponent(m):'')}
-function upd(){const f=full();$('pv').textContent=f?link():'—';$('er').textContent=f&&!valid(f)?'الرقم شكله ناقص أو زيادة، راجعه':''}
+function qrDraw(){const f=full(),c=$('qr');if(!valid(f)){c.style.display='none';$('qrh').style.display='block';return}let l=link();let ok=QR.draw(c,l,720);if(!ok){ok=QR.draw(c,'https://wa.me/'+f,720);$('qrh').textContent='الرسالة طويلة على الـQR، الـQR لفتح الشات بس';$('qrh').style.display='block'}else $('qrh').style.display='none';c.style.display='inline-block'}
+function dlQR(){const f=full();if(!valid(f)){$('er').textContent='اكتب رقم صحيح الأول';return}const src=$('qr'),c=document.createElement('canvas');c.width=900;c.height=1100;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,900,1100);g.fillStyle='#16a34a';g.fillRect(0,0,900,170);g.fillStyle='#fff';g.textAlign='center';g.direction='rtl';g.font='bold 64px sans-serif';g.fillText('كلمني على واتساب',450,110);g.drawImage(src,90,220,720,720);g.fillStyle='#14231a';g.font='bold 48px sans-serif';g.direction='ltr';g.fillText('+'+f,450,1010);g.font='28px sans-serif';g.fillStyle='#64748b';g.fillText('wa.me',450,1060);c.toBlob(async b=>{const file=new File([b],'whatsapp-qr.png',{type:'image/png'});if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file]});return}catch(e){}}const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='whatsapp-qr.png';a.click()})}
+function upd(){const f=full();$('pv').textContent=f?link():'—';$('er').textContent=f&&!valid(f)?'الرقم شكله ناقص أو زيادة، راجعه':'';qrDraw()}
 function go(){const f=full();if(!valid(f)){$('er').textContent='اكتب رقم صحيح الأول';return}save(f);window.open(link(),'_blank')}
 async function copyL(){const f=full();if(!valid(f)){$('er').textContent='اكتب رقم صحيح الأول';return}save(f);try{await navigator.clipboard.writeText(link());alert('اتنسخ اللينك ✅')}catch(e){prompt('انسخ اللينك:',link())}}
 async function shareL(){const f=full();if(!valid(f)){$('er').textContent='اكتب رقم صحيح الأول';return}const u=link();if(navigator.share){try{await navigator.share({title:'كلمني على واتساب',text:'كلمني على واتساب',url:u});return}catch(e){}}copyL()}
